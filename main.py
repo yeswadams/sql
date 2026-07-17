@@ -4,12 +4,8 @@ import pandas as pd
 
 # Connect to the database
 conn = sqlite3.connect("data.sqlite")
-cur = conn.cursor()
-cur.execute("""SELECT * FROM sqlite_master WHERE type = 'table';""")
 
-table_names = cur.fetchall()
-print(table_names)
-# print(pd.read_sql("""SELECT * FROM sqlite_master WHERE type = 'table';""", conn))
+print(pd.read_sql("""SELECT * FROM sqlite_master""", conn))
 
 
 # ------------------------------------------------------------------
