@@ -53,7 +53,7 @@ print(df_employee)
 print("-------------------End Employees & Offices-------------------")
 
 # Customers who have not placed any orders
-df_customer = pd.read_sql("""
+df_no_order = pd.read_sql("""
 SELECT customers.contactFirstName, customers.contactLastName, customers.phone, customers.salesRepEmployeeNumber
 FROM customers
 LEFT JOIN orders ON customers.customerNumber = orders.customerNumber
@@ -61,7 +61,7 @@ WHERE orders.orderNumber IS NULL
 ORDER BY customers.contactLastName
 """, conn)
 print("---------------------Customers With No Orders---------------------")
-print(df_customer)
+print(df_no_order)
 print("-------------------End Customers With No Orders-------------------")
 
 
@@ -99,7 +99,7 @@ print(df_credit)
 print("-------------------End High Credit Sales Reps-------------------")
 
 # Top-selling products by total units ordered
-df_product = pd.read_sql("""
+df_totalunits = pd.read_sql("""
 SELECT products.productName, COUNT(orderdetails.orderNumber) AS numorders, SUM(orderdetails.quantityOrdered) AS totalunits
 FROM products
 JOIN orderdetails ON products.productCode = orderdetails.productCode
@@ -107,7 +107,7 @@ GROUP BY products.productCode
 ORDER BY totalunits DESC
 """, conn)
 print("---------------------Top Products---------------------")
-print(df_product)
+print(df_totalunits)
 print("-------------------End Top Products-------------------")
 
 
@@ -116,7 +116,7 @@ print("-------------------End Top Products-------------------")
 # ------------------------------------------------------------------
 
 # Number of distinct customers who ordered each product
-df_purchaser = pd.read_sql("""
+df_total_customers = pd.read_sql("""
 SELECT products.productName, products.productCode, COUNT(DISTINCT orders.customerNumber) AS numpurchasers
 FROM products
 JOIN orderdetails ON products.productCode = orderdetails.productCode
@@ -125,11 +125,11 @@ GROUP BY products.productCode
 ORDER BY numpurchasers DESC
 """, conn)
 print("---------------------Product Purchasers---------------------")
-print(df_purchaser)
+print(df_total_customers)
 print("-------------------End Product Purchasers-------------------")
 
 # Number of customers per office
-df_total_customers = pd.read_sql("""
+df_office = pd.read_sql("""
 SELECT offices.officeCode, offices.city, COUNT(customers.customerNumber) AS n_customers
 FROM offices
 LEFT JOIN employees ON offices.officeCode = employees.officeCode
@@ -137,7 +137,7 @@ LEFT JOIN customers ON employees.employeeNumber = customers.salesRepEmployeeNumb
 GROUP BY offices.officeCode
 """, conn)
 print("---------------------Customers Per Office---------------------")
-print(df_total_customers)
+print(df_office)
 print("-------------------End Customers Per Office-------------------")
 
 
