@@ -2,39 +2,33 @@ import sqlite3
 import pandas as pd
 from main import *
 
-def test_connection():
-    assert(type(conn) == sqlite3.Connection)
+def test_join_and_filter():
+    assert(df_boston.shape == (2, 2))
+    assert(list(df_boston['firstName']) == ['Julie', 'Steve'])
+    assert(df_zero_emp.shape[0] == 0)
 
-def test_step2():
-    assert(df_first_five.shape == (23, 2))
-    assert(list(df_first_five.columns) == ['employeeNumber', 'lastName'])
+def test_type_of_join():
+    assert(df_employee.shape == (23, 4))
+    assert(df_employee.iloc[0]['firstName'] == 'Andy')
+    assert(df_contacts.shape == (24, 4))
+    assert(list(df_contacts['contactFirstName'])[0:3] == ['Raanan', 'Mel', 'Carmen'])
 
-def test_step_3():
-    assert(df_five_reverse.shape == (23, 2))
-    assert(list(df_five_reverse.columns) == ['lastName', 'employeeNumber'])
+def test_builtin_function():
+    assert(df_payment.shape == (273, 4))
+    assert(df_payment.iloc[0]['contactFirstName'] == 'Diego ')
 
-def test_step4():
-    assert('ID' in df_alias.columns)
+def test_joining_and_grouping():
+    assert(df_credit.shape == (4, 4))
+    assert(df_credit.iloc[0]['firstName'] == 'Larry')
+    assert(df_product_sold.shape == (109, 3))
+    assert(df_product_sold.iloc[0]['totalunits'] == 1808)
 
-def test_step5():
-    assert('role' in df_executive.columns)
-    for x in ['Executive', 'Not Executive']:
-        for x in list(df_executive['role']):
-            assert(x)
+def test_multiple_joins():
+    assert(df_total_customers.shape == (109, 3))
+    assert(df_total_customers.iloc[0]['numpurchasers'] == 40)
+    assert(df_customers.iloc[0]['n_customers'] == 12)
+    assert('n_customers' in list(df_customers.columns))
 
-def test_step6():
-    assert('name_length' in df_name_length.columns)
-    assert(df_name_length.iloc[0]['name_length'] == 6)
-        
-def test_step7():
-    assert('short_title' in df_short_title.columns)
-    assert(df_short_title.iloc[0]['short_title'] == 'Pr')
-
-def test_step8():
-    assert(sum_total_price[0] == 9604251)
-
-def test_step9():
-    for x in ['day', 'month', 'year']:
-        for x in df_day_month_year.columns:
-            assert(x)
-    assert(df_day_month_year.iloc[0]['day'] == '06')
+def test_subquery():
+    assert(df_under_20.shape == (15, 5))
+    assert(df_under_20.iloc[0]['firstName'] == 'Loui')

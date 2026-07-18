@@ -1,169 +1,130 @@
-# SQL Library and Pandas Library
 import sqlite3
 import pandas as pd
 
-# Connect to the database
-conn = sqlite3.connect("data.sqlite")
+#Connect to the database
+conn = sqlite3.connect('data.sqlite')
 
-print(pd.read_sql("""SELECT * FROM sqlite_master""", conn))
+pd.read_sql("""SELECT * FROM sqlite_master""", conn)
 
-
-# ------------------------------------------------------------------
-# Part 1: Join and Filter
-# ------------------------------------------------------------------
-
-# Employees who work in the Boston office
 df_boston = pd.read_sql("""
-SELECT employees.firstName, employees.jobTitle
-FROM employees
-JOIN offices ON employees.officeCode = offices.officeCode
-WHERE offices.city = "Boston"
-ORDER BY employees.employeeNumber
-""", conn)
-print("---------------------Boston Employees---------------------")
-print(df_boston)
-print("-------------------End Boston Employees-------------------")
+                        SELECT e.firstName, e.lastName
+                        FROM employees e
+                        JOIN offices o ON e.officeCode = o.officeCode
+                        WHERE o.city = 'Boston';
+                        """, conn)
 
-# Offices with zero employees ("ghost" locations)
 df_zero_emp = pd.read_sql("""
-SELECT offices.officeCode, offices.city, COUNT(employees.employeeNumber) AS numEmployees
-FROM offices
-LEFT JOIN employees ON offices.officeCode = employees.officeCode
-GROUP BY offices.officeCode
-HAVING COUNT(employees.employeeNumber) = 0
-""", conn)
-print("---------------------Ghost Offices---------------------")
-print(df_zero_emp)
-print("-------------------End Ghost Offices-------------------")
+                          SELECT o.officeCode, o.city
+                          FROM offices o
+                          LEFT JOIN employees e ON o.officeCode = e.officeCode
+                          WHERE e.employeeNumber IS NULL;
+                          """, conn)
 
 
-# ------------------------------------------------------------------
-# Part 2: Type of Join
-# ------------------------------------------------------------------
 
-# All employees with their office's city/state (if any), ordered by name
 df_employee = pd.read_sql("""
-SELECT employees.firstName, employees.lastName, offices.city, offices.state
-FROM employees
-LEFT JOIN offices ON employees.officeCode = offices.officeCode
-ORDER BY employees.firstName, employees.lastName
-""", conn)
-print("---------------------Employees & Offices---------------------")
-print(df_employee)
-print("-------------------End Employees & Offices-------------------")
-
-# Customers who have not placed any orders
-df_no_order = pd.read_sql("""
-SELECT customers.contactFirstName, customers.contactLastName, customers.phone, customers.salesRepEmployeeNumber
-FROM customers
-LEFT JOIN orders ON customers.customerNumber = orders.customerNumber
-WHERE orders.orderNumber IS NULL
-ORDER BY customers.contactLastName
-""", conn)
-print("---------------------Customers With No Orders---------------------")
-print(df_no_order)
-print("-------------------End Customers With No Orders-------------------")
+                          SELECT e.firstName, e.lastName, o.city, o.state
+                          FROM employees e
+                          LEFT JOIN offices o ON e.officeCode = o.officeCode
+                          ORDER BY e.firstName, e.lastName;
+                          """, conn)
 
 
-# ------------------------------------------------------------------
-# Part 3: Built-In Function
-# ------------------------------------------------------------------
 
-# Customer payments, sorted by amount (cast to numeric since it's stored as text)
+df_contacts = pd.read_sql("""
+                          SELECT c.contactFirstName, c.contactLastName, c.phone, c.salesRepEmployeeNumber
+                          FROM customers c
+                          LEFT JOIN orders o ON c.customerNumber = o.customerNumber
+                          WHERE o.orderNumber IS NULL
+                          ORDER BY c.contactLastName;
+                          """, conn)
+
+
 df_payment = pd.read_sql("""
-SELECT customers.contactFirstName, customers.contactLastName, payments.amount, payments.paymentDate
-FROM customers
-JOIN payments ON customers.customerNumber = payments.customerNumber
-ORDER BY CAST(payments.amount AS REAL) DESC
-""", conn)
-print("---------------------Customer Payments---------------------")
-print(df_payment)
-print("-------------------End Customer Payments-------------------")
+                         SELECT c.contactFirstName, c.contactLastName, p.amount, p.paymentDate
+                         FROM customers c
+                         JOIN payments p ON c.customerNumber = p.customerNumber
+                         ORDER BY CAST(p.amount AS REAL) DESC;
+                         """, conn)
 
 
-# ------------------------------------------------------------------
-# Part 4: Joining and Grouping
-# ------------------------------------------------------------------
-
-# Employees whose customers have an average credit limit over 90k
 df_credit = pd.read_sql("""
-SELECT employees.employeeNumber, employees.firstName, employees.lastName, COUNT(customers.customerNumber) AS numCustomers
-FROM employees
-JOIN customers ON employees.employeeNumber = customers.salesRepEmployeeNumber
-GROUP BY employees.employeeNumber
-HAVING AVG(customers.creditLimit) > 90000
-ORDER BY numCustomers DESC
-""", conn)
-print("---------------------High Credit Sales Reps---------------------")
-print(df_credit)
-print("-------------------End High Credit Sales Reps-------------------")
+                        SELECT e.employeeNumber, e.firstName, e.lastName, COUNT(c.customerNumber) AS num_customers
+                        FROM employees e
+                        JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber
+                        GROUP BY e.employeeNumber
+                        HAVING AVG(c.creditLimit) > 90000
+                        ORDER BY num_customers DESC
+                        LIMIT 4;
+                        """, conn)
 
-# Top-selling products by total units ordered
-df_totalunits = pd.read_sql("""
-SELECT products.productName, COUNT(orderdetails.orderNumber) AS numorders, SUM(orderdetails.quantityOrdered) AS totalunits
-FROM products
-JOIN orderdetails ON products.productCode = orderdetails.productCode
-GROUP BY products.productCode
-ORDER BY totalunits DESC
-""", conn)
-print("---------------------Top Products---------------------")
-print(df_totalunits)
-print("-------------------End Top Products-------------------")
+df_product_sold = pd.read_sql("""
+                              SELECT p.productName,
+                                     COUNT(o.orderNumber) AS numorders,
+                                     SUM(od.quantityOrdered) AS totalunits
+                              FROM products p
+                              JOIN orderdetails od ON p.productCode = od.productCode 
+                              JOIN orders o ON od.orderNumber = o.orderNumber
+                              GROUP BY p.productName
+                              ORDER BY totalunits DESC;
+                              """, conn)
 
-
-# ------------------------------------------------------------------
-# Part 5: Multiple Joins
-# ------------------------------------------------------------------
-
-# Number of distinct customers who ordered each product
 df_total_customers = pd.read_sql("""
-SELECT products.productName, products.productCode, COUNT(DISTINCT orders.customerNumber) AS numpurchasers
-FROM products
-JOIN orderdetails ON products.productCode = orderdetails.productCode
-JOIN orders ON orderdetails.orderNumber = orders.orderNumber
-GROUP BY products.productCode
-ORDER BY numpurchasers DESC
-""", conn)
-print("---------------------Product Purchasers---------------------")
-print(df_total_customers)
-print("-------------------End Product Purchasers-------------------")
-
-# Number of customers per office
-df_office = pd.read_sql("""
-SELECT offices.officeCode, offices.city, COUNT(customers.customerNumber) AS n_customers
-FROM offices
-LEFT JOIN employees ON offices.officeCode = employees.officeCode
-LEFT JOIN customers ON employees.employeeNumber = customers.salesRepEmployeeNumber
-GROUP BY offices.officeCode
-""", conn)
-print("---------------------Customers Per Office---------------------")
-print(df_office)
-print("-------------------End Customers Per Office-------------------")
+                                 SELECT p.productName, p.productCode,
+                                        COUNT(DISTINCT o.customerNumber) AS numpurchasers
+                                 FROM products p
+                                 JOIN orderdetails od ON p.productCode = od.productCode
+                                 JOIN orders o ON od.orderNumber = o.orderNumber
+                                 GROUP BY p.productName, p.productCode
+                                 ORDER BY numpurchasers DESC;
+                                 """, conn)
 
 
-# ------------------------------------------------------------------
-# Part 6: Subquery
-# ------------------------------------------------------------------
+df_customers = pd.read_sql("""
+                           SELECT o.officeCode, o.city, COUNT(c.customerNumber) AS n_customers
+                           FROM offices o
+                           JOIN employees e ON o.officeCode = e.officeCode
+                           JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber
+                           GROUP BY o.officeCode, o.city;
+                           """, conn)
 
-# Employees who sold products ordered by fewer than 20 distinct customers
+
 df_under_20 = pd.read_sql("""
-SELECT DISTINCT employees.employeeNumber, employees.firstName, employees.lastName, offices.city, offices.officeCode
-FROM employees
-JOIN offices ON employees.officeCode = offices.officeCode
-JOIN customers ON employees.employeeNumber = customers.salesRepEmployeeNumber
-JOIN orders ON customers.customerNumber = orders.customerNumber
-JOIN orderdetails ON orders.orderNumber = orderdetails.orderNumber
-WHERE orderdetails.productCode IN (
-    SELECT orderdetails.productCode
-    FROM orderdetails
-    JOIN orders ON orderdetails.orderNumber = orders.orderNumber
-    GROUP BY orderdetails.productCode
-    HAVING COUNT(DISTINCT orders.customerNumber) < 20
-)
-""", conn)
-print("---------------------Underperforming Product Sellers---------------------")
-print(df_under_20)
-print("-------------------End Underperforming Product Sellers-------------------")
+                          WITH underperforming AS (
+                              SELECT p.productCode
+                              FROM products p
+                              JOIN orderdetails od ON p.productCode = od.productCode
+                              JOIN orders o ON od.orderNumber = o.orderNumber 
+                              GROUP BY p.productCode
+                              HAVING COUNT(DISTINCT o.customerNumber) < 20
+                          )
+                          SELECT e.employeeNumber, e.firstName, e.lastName, o.city, o.officeCode
+                          FROM employees e
+                          JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber
+                          JOIN orders ord ON c.customerNumber = ord.customerNumber
+                          JOIN orderdetails od ON ord.orderNumber = od.orderNumber
+                          JOIN underperforming u ON od.productCode = u.productCode
+                          JOIN offices o ON e.officeCode = o.officeCode
+                          GROUP BY e.employeeNumber
+                          ORDER BY e.lastName;
+                          """, conn)
 
+results = {
+    "Boston employees": df_boston,
+    "Offices with zero employees": df_zero_emp,
+    "Employees and offices": df_employee,
+    "Customers without orders": df_contacts,
+    "Payments": df_payment,
+    "High-credit sales representatives": df_credit,
+    "Products sold": df_product_sold,
+    "Product purchasers": df_total_customers,
+    "Customers per office": df_customers,
+    "Employees who sold underperforming products": df_under_20,
+}
+
+if __name__ == "__main__":
+    for title, dataframe in results.items():
+        print(f"\n{title}\n{'-' * len(title)}")
+        print(dataframe.to_string(index=False))
 
 conn.close()
